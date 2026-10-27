@@ -1,0 +1,462 @@
+<title>Мой ритм</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: одноэкранное мобильное приложение — шапка с датой, переключатель вкладок,
+   прокручиваемая лента карточек. Палитра: лиловый YourSelf + серебро, мягкие нейтрали. */
+:root{
+  --lilac:#A793B9;        /* фирменный лиловый YourSelf */
+  --lilac-deep:#7D6494;   /* насыщенный для текста/акцентов */
+  --lilac-soft:#F0EBF4;   /* заливка карточек-акцентов */
+  --silver:#C9CDD4;       /* серебро */
+  --silver-soft:#EEF0F3;  /* серебристая заливка */
+  --bg:#F7F6F9;           /* фон с лёгким лиловым биасом */
+  --surface:#FFFFFF;
+  --fg:#2A2630;           /* тёплый тёмный, не чёрный */
+  --muted:#8A8594;        /* приглушённый серо-лиловый */
+  --line:#E6E3EC;
+  --ok:#6Fae8f;           /* мягкий зелёный для выполненного */
+  --warn:#C58F6B;         /* спокойный терракот для срочного */
+  --shadow:0 1px 2px rgba(42,38,48,.04), 0 6px 20px rgba(125,100,148,.06);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --lilac:#B9A6CB; --lilac-deep:#C9B6DB; --lilac-soft:#2B2435; --silver:#6A6E78;
+  --silver-soft:#2A2A31; --bg:#161419; --surface:#201D26; --fg:#ECE8F0;
+  --muted:#9A94A6; --line:#322D3C; --ok:#7Fb79a; --warn:#D1a07c;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --lilac:#B9A6CB; --lilac-deep:#C9B6DB; --lilac-soft:#2B2435; --silver:#6A6E78;
+  --silver-soft:#2A2A31; --bg:#161419; --surface:#201D26; --fg:#ECE8F0;
+  --muted:#9A94A6; --line:#322D3C; --ok:#7Fb79a; --warn:#D1a07c;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25); color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  display:flex;flex-direction:column;
+  -webkit-font-smoothing:antialiased;
+}
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@600;700&display=swap');
+
+/* фиксированная подложка под системную полосу сверху */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);
+  background:var(--surface);z-index:20}
+
+/* ---------- Шапка ---------- */
+.head{
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:15;
+  background:var(--surface);border-bottom:1px solid var(--line);
+  padding-block:14px 10px;
+  padding-left:max(18px,env(safe-area-inset-left,0px));
+  padding-right:max(18px,env(safe-area-inset-right,0px));
+}
+.brand{font-family:"Unbounded",sans-serif;font-weight:700;font-size:1.02rem;
+  color:var(--lilac-deep);letter-spacing:.01em;margin:0}
+.date{font-size:.82rem;color:var(--muted);margin:0;font-weight:500}
+.daynav{display:flex;align-items:center;gap:10px;margin-top:4px}
+.daynav-c{flex:1;display:flex;align-items:center;gap:8px;min-width:0}
+.daybtn{flex:0 0 auto;width:30px;height:30px;border-radius:9px;border:1px solid var(--line);
+  background:var(--surface);color:var(--lilac-deep);font-size:1.1rem;line-height:1;cursor:pointer;
+  display:grid;place-items:center;font-weight:700}
+.daybtn:active{transform:scale(.94)}
+.daytoday{flex:0 0 auto;border:none;background:var(--lilac-soft);color:var(--lilac-deep);
+  font:inherit;font-weight:700;font-size:.66rem;padding:3px 8px;border-radius:999px;cursor:pointer}
+.focus{font-size:.82rem;color:var(--fg);margin:7px 0 0;font-weight:600}
+.focus b{color:var(--lilac-deep)}
+
+/* ---------- Вкладки ---------- */
+.tabs{display:flex;gap:6px;margin-top:12px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;border:1px solid var(--line);background:transparent;color:var(--muted);
+  font:inherit;font-size:.82rem;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;
+  white-space:nowrap;transition:.15s}
+.tab[aria-selected="true"]{background:var(--lilac);color:#fff;border-color:var(--lilac)}
+
+/* ---------- Прокручиваемая область ---------- */
+.scroll{flex:1;overflow-y:auto;
+  padding-block:16px 28px;
+  padding-left:max(18px,env(safe-area-inset-left,0px));
+  padding-right:max(18px,env(safe-area-inset-right,0px));
+}
+.view[hidden]{display:none}
+
+/* сводка-счётчики */
+.counts{display:flex;gap:8px;margin-bottom:16px}
+.count{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:11px 10px;box-shadow:var(--shadow);min-width:0}
+.count .num{font-family:"Unbounded",sans-serif;font-weight:700;font-size:1.3rem;line-height:1;
+  color:var(--lilac-deep)}
+.count .lbl{font-size:.7rem;color:var(--muted);margin-top:5px;font-weight:600}
+
+/* секция-уровень */
+.level{margin-bottom:18px}
+.level-h{display:flex;align-items:center;gap:8px;margin:0 0 9px;
+  font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.level-h .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.lv-must .dot{background:var(--warn)}
+.lv-order .dot{background:var(--silver)}
+.lv-forward .dot{background:var(--lilac)}
+.lv-self .dot{background:var(--ok)}
+
+/* карточка-дело */
+.item{display:flex;gap:11px;align-items:flex-start;background:var(--surface);
+  border:1px solid var(--line);border-radius:13px;padding:12px 13px;margin-bottom:8px;
+  box-shadow:var(--shadow);cursor:pointer;transition:.15s;text-align:left;width:100%;font:inherit;color:inherit}
+.item:active{transform:scale(.995)}
+.check{flex:0 0 auto;width:21px;height:21px;border-radius:7px;border:2px solid var(--silver);
+  margin-top:1px;display:grid;place-items:center;transition:.15s}
+.item.done .check{background:var(--ok);border-color:var(--ok)}
+.check svg{width:12px;height:12px;opacity:0;transition:.15s}
+.item.done .check svg{opacity:1}
+.item-b{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.item-t{display:block;font-size:.92rem;font-weight:600;line-height:1.3}
+.item.done .item-t{color:var(--muted);text-decoration:line-through}
+.item-s{display:block;font-size:.76rem;color:var(--muted)}
+.item.overdue{border-color:var(--warn);background:linear-gradient(0deg,rgba(197,143,107,.06),rgba(197,143,107,.06)),var(--surface)}
+.item.overdue .check{border-color:var(--warn)}
+.item-s.od{color:var(--warn);font-weight:700}
+
+/* лента 21 дня */
+.r-group{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--muted);margin:16px 0 8px}
+.r-group:first-child{margin-top:0}
+.r-item{display:flex;gap:11px;align-items:center;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:11px 13px;margin-bottom:7px;box-shadow:var(--shadow)}
+.r-item.current{border-color:var(--lilac);background:var(--lilac-soft)}
+.r-n{flex:0 0 auto;width:28px;height:28px;border-radius:9px;background:var(--silver-soft);
+  color:var(--lilac-deep);font-weight:700;font-size:.82rem;display:grid;place-items:center}
+.r-item.current .r-n{background:var(--lilac);color:#fff}
+.r-b{min-width:0}
+.r-t{font-size:.9rem;font-weight:600}
+.r-d{font-size:.75rem;color:var(--muted);margin-top:2px}
+.r-badge{margin-left:auto;flex:0 0 auto;font-size:.66rem;font-weight:700;color:var(--lilac-deep);
+  background:var(--surface);border:1px solid var(--lilac);border-radius:999px;padding:3px 9px}
+
+/* дни рождения */
+.bd{display:flex;gap:12px;align-items:center;padding:11px 2px;border-bottom:1px solid var(--line)}
+.bd-when{flex:0 0 auto;width:58px;text-align:center}
+.bd-when .d{font-family:"Unbounded",sans-serif;font-weight:700;font-size:1.15rem;color:var(--lilac-deep);line-height:1}
+.bd-when .m{font-size:.66rem;color:var(--muted);text-transform:uppercase;margin-top:2px;font-weight:600}
+.bd-b{min-width:0;flex:1}
+.bd-t{font-size:.9rem;font-weight:600;line-height:1.25}
+.bd-in{font-size:.74rem;color:var(--muted);margin-top:2px}
+.bd-soon .bd-in{color:var(--warn);font-weight:600}
+.bd-search{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--fg);
+  font:inherit;font-size:.88rem;padding:11px 14px;border-radius:12px;margin-bottom:14px}
+.bd-search::placeholder{color:var(--muted)}
+
+/* не забыть */
+.add{display:flex;flex-direction:column;gap:9px;background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;padding:14px;margin-bottom:18px;box-shadow:var(--shadow)}
+.add label{font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.add input{border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit;
+  font-size:.9rem;padding:10px 12px;border-radius:10px}
+.add .row{display:flex;gap:9px;flex-wrap:wrap}
+.add .row input{flex:1;min-width:120px}
+.add button{background:var(--lilac);color:#fff;border:none;font:inherit;font-weight:700;
+  font-size:.9rem;padding:11px;border-radius:11px;cursor:pointer;transition:.15s}
+.add button:active{transform:scale(.98)}
+.note{display:flex;gap:11px;align-items:center;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:11px 13px;margin-bottom:7px;box-shadow:var(--shadow)}
+.note-when{flex:0 0 auto;font-size:.72rem;font-weight:700;color:var(--lilac-deep);
+  background:var(--lilac-soft);border-radius:8px;padding:5px 9px;white-space:nowrap}
+.note-t{font-size:.88rem;font-weight:500;min-width:0;flex:1}
+.note-x{flex:0 0 auto;border:none;background:transparent;color:var(--muted);font-size:1.1rem;
+  cursor:pointer;padding:0 4px;line-height:1}
+
+.hint{font-size:.76rem;color:var(--muted);line-height:1.45;margin:4px 0 16px;
+  padding:10px 12px;background:var(--silver-soft);border-radius:10px}
+.empty{text-align:center;color:var(--muted);font-size:.86rem;padding:30px 10px}
+
+/* заглушка при ошибке загрузки */
+.fallback{margin:auto;max-width:300px;text-align:center;padding:40px 20px}
+.fallback h2{font-family:"Unbounded",sans-serif;color:var(--lilac-deep);font-size:1.1rem}
+.fallback p{color:var(--muted);font-size:.88rem;line-height:1.5}
+
+:focus-visible{outline:2px solid var(--lilac);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="head">
+  <h1 class="brand">Мой ритм</h1>
+  <div class="daynav" id="daynav">
+    <button class="daybtn" id="dprev" aria-label="Предыдущий день">‹</button>
+    <div class="daynav-c"><p class="date" id="date">—</p><button class="daytoday" id="dtoday" hidden>сегодня</button></div>
+    <button class="daybtn" id="dnext" aria-label="Следующий день">›</button>
+  </div>
+  <p class="focus" id="focus"></p>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-view="today">Сегодня</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="remind">Не забыть</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="rhythm">21 день</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="bd">Дни рождения</button>
+  </div>
+</div>
+
+<div class="scroll" id="scroll">
+  <div class="view" id="view-today"></div>
+  <div class="view" id="view-remind" hidden></div>
+  <div class="view" id="view-rhythm" hidden></div>
+  <div class="view" id="view-bd" hidden></div>
+</div>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+(function(){
+  try{ if(window.Telegram&&Telegram.WebApp){ Telegram.WebApp.ready(); Telegram.WebApp.expand(); } }catch(e){}
+
+  var D=null;
+  var MGEN=["","янв","фев","мар","апр","мая","июн","июл","авг","сен","окт","ноя","дек"];
+  var MFULL=["","января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+  var WD=["воскресенье","понедельник","вторник","среда","четверг","пятница","суббота"];
+  var TODAY=new Date(2026,9,27); // демо: 27 октября 2026
+  var VIEW=new Date(2026,9,27); // день, который сейчас смотрим (можно листать)
+  function ymd(dt){return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
+  function mdKey(dt){return String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
+  function sameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();}
+  function dayDiff(a,b){return Math.round((new Date(a.getFullYear(),a.getMonth(),a.getDate())-new Date(b.getFullYear(),b.getMonth(),b.getDate()))/86400000);}
+  // статус выполнения задач по дате: ключ id+date, отметка галочки хранится здесь
+  var DONE={};
+
+  function daysUntil(m,d){
+    var y=TODAY.getFullYear();
+    var t=new Date(y,m-1,Math.min(d,28));
+    var real=new Date(y,m-1,d);
+    if(real<TODAY){ real=new Date(y+1,m-1,d); }
+    var diff=Math.round((real-new Date(y,TODAY.getMonth(),TODAY.getDate()))/86400000);
+    if(diff<0)diff+=365;
+    return diff;
+  }
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]});}
+  var CHK='<svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2 4.7 9 10 3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function isDone(id,dateStr){return !!DONE[id+'@'+dateStr];}
+  function setDone(id,dateStr,v){DONE[id+'@'+dateStr]=v;}
+
+  function itemHTML(it){
+    var od=it.overdueDays>0;
+    return '<button class="item'+(it.done?' done':'')+(od?' overdue':'')+'" data-id="'+esc(it.id)+'">'+
+      '<span class="check">'+CHK+'</span>'+
+      '<span class="item-b"><span class="item-t">'+esc(it.title)+'</span>'+
+      (it.tag?'<span class="item-s'+(od?' od':'')+'">'+esc(it.tag)+'</span>':'')+'</span></button>';
+  }
+
+  // Собрать, что показывается в выбранный день VIEW, с учётом типа поведения
+  function collectDay(){
+    var vStr=ymd(VIEW), vKey=mdKey(VIEW);
+    var must=[],order=[],forward=[],self=[];
+
+    // ЗАДАЧИ с датой и типом
+    (D.tasks||[]).forEach(function(t){
+      var tDate=new Date(t.date+'T00:00:00');
+      var diff=dayDiff(VIEW,tDate); // >0 значит VIEW позже даты задачи
+      var done=isDone(t.id,vStr);
+      if(t.type==='carry'||t.type==='forward'){
+        // показываем в день задачи и во все последующие дни, пока не закрыта
+        if(diff<0) return;                 // ещё не наступила
+        if(diff>0){
+          // проверяем: не закрыли ли её в какой-то из прошлых дней
+          var closedEarlier=false;
+          for(var k=0;k<=diff;k++){
+            var dk=new Date(tDate);dk.setDate(dk.getDate()+k);
+            if(isDone(t.id,ymd(dk))){closedEarlier=true;break;}
+          }
+          if(closedEarlier) return;
+        }
+        var it={id:t.id,title:t.title,done:done,overdueDays:diff};
+        it.tag = diff>0 ? ('просрочено с '+tDate.getDate()+' '+MGEN[tDate.getMonth()+1]+' · '+diff+' '+plural(diff))
+                        : (t.type==='forward'?'шаг вперёд':'срок сегодня');
+        (t.level==='forward'?forward:must).push(it);
+      } else if(t.type==='event'){
+        if(diff!==0) return;               // событие только в свой день
+        self.push({id:t.id,title:t.title,done:done,overdueDays:0,tag:'событие'});
+      } else if(t.type==='daily'){
+        self.push({id:t.id,title:t.title,done:done,overdueDays:0,tag:'каждый день'});
+      }
+    });
+
+    // РЕГУЛЯРНЫЕ 'для себя' — своё на каждый день, вчерашнее не тащим
+    (D.selfCare||[]).forEach(function(s){
+      if(s.recur==='раз в неделю' && VIEW.getDay()!==1) return; // статья — по понедельникам (демо)
+      if(s.recur==='раз в месяц' && VIEW.getDate()!==1) return;  // театр/музей — 1 числа (демо)
+      self.push({id:'sc-'+s.id,title:s.title,done:isDone('sc-'+s.id,vStr),overdueDays:0,tag:s.recur});
+    });
+
+    // 21 ДЕНЬ — проверка текущего дня цикла падает в 'порядок' (только сегодня, демо)
+    if(sameDay(VIEW,TODAY)){
+      var cur=(D.rhythm21||[]).filter(function(r){return r.n===D.rhythmCurrentDay;})[0];
+      if(cur) order.push({id:'r-'+cur.n,title:'День '+cur.n+' ритма: '+cur.title,done:isDone('r-'+cur.n,vStr),overdueDays:0,tag:'YOURSELF · регулярная проверка'});
+    }
+
+    // ДНИ РОЖДЕНИЯ в этот день — событие, галочка 'увидела', не переносится
+    (D.birthdays||[]).forEach(function(b){
+      if(b.key===vKey) self.push({id:'bd-'+b.key,title:b.name+' — поздравить',done:isDone('bd-'+b.key,vStr),overdueDays:0,tag:'день рождения'});
+    });
+
+    // ЗАМЕТКИ 'не забыть' на этот день — переносятся как carry (важное)
+    (D.reminders||[]).forEach(function(r){
+      var p=r.key.split('-'),rm=+p[0],rd=+p[1];
+      // ближайшая дата этой заметки
+      var ry=VIEW.getFullYear(), rDate=new Date(ry,rm-1,rd);
+      var diff=dayDiff(VIEW,rDate);
+      if(diff===0){ must.push({id:r.id,title:r.text,done:isDone(r.id,vStr),overdueDays:0,tag:'не забыть · сегодня'}); }
+    });
+
+    return {must:must,order:order,forward:forward,self:self};
+  }
+
+  function renderToday(){
+    var day=collectDay();
+    var blocks=[
+      ['lv-must','Обязательно',day.must],
+      ['lv-order','Поддерживать порядок',day.order],
+      ['lv-forward','Двигаться вперёд',day.forward],
+      ['lv-self','Не забыть про себя',day.self],
+    ];
+    var all=day.must.concat(day.order,day.forward,day.self);
+    var doneN=all.filter(function(i){return i.done;}).length;
+    var overdueN=day.must.filter(function(i){return i.overdueDays>0;}).length;
+    var html='<div class="counts">'+
+      '<div class="count"><div class="num">'+doneN+'</div><div class="lbl">сделано</div></div>'+
+      '<div class="count"><div class="num">'+(all.length-doneN)+'</div><div class="lbl">осталось</div></div>'+
+      '<div class="count"><div class="num" style="color:'+(overdueN?'var(--warn)':'var(--lilac-deep)')+'">'+overdueN+'</div><div class="lbl">просрочено</div></div>'+
+      '</div>';
+    var any=false;
+    blocks.forEach(function(b){
+      if(!b[2].length)return; any=true;
+      html+='<div class="level '+b[0]+'"><div class="level-h"><span class="dot"></span>'+b[1]+'</div>';
+      b[2].forEach(function(it){html+=itemHTML(it);});
+      html+='</div>';
+    });
+    if(!any)html+='<div class="empty">На этот день дел нет</div>';
+    document.getElementById('view-today').innerHTML=html;
+    var f=document.getElementById('focus');
+    f.innerHTML = sameDay(VIEW,TODAY) ? ('Сегодня в фокусе <b>'+all.length+'</b> дел') : ('<b>'+all.length+'</b> дел в этот день');
+  }
+
+  function toggleTask(id){
+    var vStr=ymd(VIEW);
+    setDone(id,vStr,!isDone(id,vStr));
+    renderToday();
+  }
+
+  function moveDay(delta){
+    VIEW=new Date(VIEW.getFullYear(),VIEW.getMonth(),VIEW.getDate()+delta);
+    updateDateHead();renderToday();
+  }
+  function updateDateHead(){
+    var d=document.getElementById('date');
+    var diff=dayDiff(VIEW,TODAY);
+    var label=WD[VIEW.getDay()];label=label.charAt(0).toUpperCase()+label.slice(1);
+    var pfx = diff===0?'':diff===1?'завтра · ':diff===-1?'вчера · ':(diff>1?'через '+diff+' '+plural(diff)+' · ':diff<-1?diff*-1+' '+plural(-diff)+' назад · ':'');
+    d.textContent=pfx+label+', '+VIEW.getDate()+' '+MFULL[VIEW.getMonth()+1];
+    document.getElementById('dtoday').hidden=sameDay(VIEW,TODAY);
+  }
+
+  function renderRhythm(){
+    var list=D.rhythm21||[],cur=D.rhythmCurrentDay,html='',lastG=null;
+    html+='<div class="hint">Плановый глубокий контроль одного направления в день. Сегодня идёт день '+cur+' цикла — он подсвечен. На проверку встаёт в ленту «Сегодня».</div>';
+    list.forEach(function(r){
+      if(r.group!==lastG){html+='<div class="r-group">'+esc(r.group)+'</div>';lastG=r.group;}
+      html+='<div class="r-item'+(r.n===cur?' current':'')+'"><div class="r-n">'+r.n+'</div>'+
+        '<div class="r-b"><div class="r-t">'+esc(r.title)+'</div><div class="r-d">'+esc(r.desc)+'</div></div>'+
+        (r.n===cur?'<span class="r-badge">сегодня</span>':'')+'</div>';
+    });
+    document.getElementById('view-rhythm').innerHTML=html;
+  }
+
+  function renderBirthdays(filter){
+    var list=(D.birthdays||[]).map(function(b){
+      return {name:b.name,day:b.day,month:b.month,in:daysUntil(b.month,b.day)};
+    });
+    list.sort(function(a,b){return a.in-b.in;});
+    if(filter){var f=filter.toLowerCase();list=list.filter(function(b){return b.name.toLowerCase().indexOf(f)>=0;});}
+    var html='<input class="bd-search" id="bd-q" placeholder="Поиск по имени…" value="'+esc(filter||'')+'">';
+    if(!list.length){html+='<div class="empty">Ничего не найдено</div>';}
+    list.forEach(function(b){
+      var inTxt=b.in===0?'сегодня':b.in===1?'завтра':'через '+b.in+' '+plural(b.in);
+      html+='<div class="bd'+(b.in<=7?' bd-soon':'')+'">'+
+        '<div class="bd-when"><div class="d">'+b.day+'</div><div class="m">'+MGEN[b.month]+'</div></div>'+
+        '<div class="bd-b"><div class="bd-t">'+esc(b.name)+'</div><div class="bd-in">'+inTxt+'</div></div></div>';
+    });
+    document.getElementById('view-bd').innerHTML=html;
+    var q=document.getElementById('bd-q');
+    if(q){q.oninput=function(){var v=this.value;renderBirthdays(v);
+      var nq=document.getElementById('bd-q');nq.focus();nq.setSelectionRange(v.length,v.length);};}
+  }
+  function plural(n){n=n%100;if(n>=11&&n<=14)return'дней';n=n%10;return n===1?'день':(n>=2&&n<=4)?'дня':'дней';}
+
+  function renderRemind(){
+    var html='<div class="add">'+
+      '<label for="nt">Быстро записать, чтобы не держать в голове</label>'+
+      '<input id="nt" placeholder="Например: ДР у Ани из Перфекта">'+
+      '<div class="row"><input id="nd" placeholder="День (1–31)" inputmode="numeric"><input id="nm" placeholder="Месяц (1–12)" inputmode="numeric"></div>'+
+      '<button id="nadd">Сохранить</button></div>'+
+      '<div class="hint">Заметка сохранится и сама появится в плане нужного дня. Это и есть память: записала один раз — в тот день увидишь. Живого пуша в прототипе нет.</div>'+
+      '<div id="notes"></div>';
+    document.getElementById('view-remind').innerHTML=html;
+    document.getElementById('nadd').onclick=addNote;
+    drawNotes();
+  }
+  function drawNotes(){
+    var box=document.getElementById('notes');
+    var list=(D.reminders||[]).slice().sort(function(a,b){return a.key<b.key?-1:1;});
+    if(!list.length){box.innerHTML='<div class="empty">Пока пусто</div>';return;}
+    box.innerHTML=list.map(function(r){
+      var p=r.key.split('-'),when=parseInt(p[1],10)+' '+MGEN[parseInt(p[0],10)];
+      return '<div class="note"><span class="note-when">'+when+'</span>'+
+        '<span class="note-t">'+esc(r.text)+'</span>'+
+        '<button class="note-x" data-id="'+esc(r.id)+'" aria-label="Удалить">×</button></div>';
+    }).join('');
+    box.querySelectorAll('.note-x').forEach(function(x){
+      x.onclick=function(){D.reminders=D.reminders.filter(function(r){return r.id!==x.dataset.id;});drawNotes();renderToday();};
+    });
+  }
+  function addNote(){
+    var t=document.getElementById('nt').value.trim();
+    var d=parseInt(document.getElementById('nd').value,10);
+    var m=parseInt(document.getElementById('nm').value,10);
+    if(!t||!(d>=1&&d<=31)||!(m>=1&&m<=12)){return;}
+    D.reminders.push({id:'u'+Date.now(),text:t,key:String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'),note:true});
+    document.getElementById('nt').value='';document.getElementById('nd').value='';document.getElementById('nm').value='';
+    drawNotes();renderToday();
+  }
+
+  // вкладки
+  document.querySelectorAll('.tab').forEach(function(tab){
+    tab.onclick=function(){
+      document.querySelectorAll('.tab').forEach(function(t){t.setAttribute('aria-selected','false');});
+      tab.setAttribute('aria-selected','true');
+      ['today','remind','rhythm','bd'].forEach(function(v){
+        document.getElementById('view-'+v).hidden=(v!==tab.dataset.view);
+      });
+      document.getElementById('scroll').scrollTop=0;
+    };
+  });
+  // делегирование клика по делам
+  document.getElementById('view-today').addEventListener('click',function(e){
+    var it=e.target.closest('.item');if(it)toggleTask(it.dataset.id);
+  });
+  // листание дней
+  document.getElementById('dprev').onclick=function(){moveDay(-1);};
+  document.getElementById('dnext').onclick=function(){moveDay(1);};
+  document.getElementById('dtoday').onclick=function(){VIEW=new Date(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate());updateDateHead();renderToday();};
+
+  function boot(){
+    updateDateHead();
+    renderToday();renderRemind();renderRhythm();renderBirthdays('');
+  }
+
+  fetch('data.json?v='+Date.now()).then(function(r){
+    if(!r.ok)throw 0;return r.json();
+  }).then(function(j){D=j;boot();}).catch(function(){
+    document.getElementById('scroll').innerHTML=
+      '<div class="fallback"><h2>Не удалось загрузить данные</h2>'+
+      '<p>Файл data.json рядом с приложением не открылся. Проверь, что он лежит в той же папке и доступен.</p></div>';
+  });
+})();
+</script>
