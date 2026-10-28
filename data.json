@@ -132,7 +132,6 @@
    "desc": "дебиторка, что перенести на след. цикл"
   }
  ],
- "rhythmCurrentDay": 3,
  "selfCare": [
   {
    "id": "water",
@@ -844,7 +843,7 @@
    "title": "Подать заявление в суд",
    "level": "must",
    "type": "carry",
-   "date": "2026-11-07",
+   "dayOffset": -3,
    "done": false
   },
   {
@@ -852,7 +851,7 @@
    "title": "Подготовить предложение клиенту",
    "level": "must",
    "type": "carry",
-   "date": "2026-10-27",
+   "dayOffset": 0,
    "done": false
   },
   {
@@ -860,7 +859,7 @@
    "title": "Собрать структуру продукта на подписке",
    "level": "forward",
    "type": "forward",
-   "date": "2026-10-27",
+   "dayOffset": 0,
    "done": false
   },
   {
@@ -868,7 +867,7 @@
    "title": "Отправить Павлу структуру презентации",
    "level": "must",
    "type": "carry",
-   "date": "2026-10-28",
+   "dayOffset": 1,
    "done": false
   }
  ]
