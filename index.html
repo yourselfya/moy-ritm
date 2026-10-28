@@ -213,14 +213,30 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   var MGEN=["","янв","фев","мар","апр","мая","июн","июл","авг","сен","окт","ноя","дек"];
   var MFULL=["","января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
   var WD=["воскресенье","понедельник","вторник","среда","четверг","пятница","суббота"];
-  var TODAY=new Date(2026,9,27); // демо: 27 октября 2026
-  var VIEW=new Date(2026,9,27); // день, который сейчас смотрим (можно листать)
+  var TODAY=new Date(); TODAY.setHours(0,0,0,0); // настоящая дата устройства
+  var VIEW=new Date(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate()); // день, который смотрим
   function ymd(dt){return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
   function mdKey(dt){return String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
   function sameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();}
   function dayDiff(a,b){return Math.round((new Date(a.getFullYear(),a.getMonth(),a.getDate())-new Date(b.getFullYear(),b.getMonth(),b.getDate()))/86400000);}
   // статус выполнения задач по дате: ключ id+date, отметка галочки хранится здесь
   var DONE={};
+  // какой это рабочий день месяца (пн–пт, выходные пропускаются)
+  function workingDayOfMonth(dt){
+    var c=0;
+    for(var d=1;d<=dt.getDate();d++){
+      var wd=new Date(dt.getFullYear(),dt.getMonth(),d).getDay();
+      if(wd!==0&&wd!==6)c++;
+    }
+    return c;
+  }
+  // номер в 21-дневном цикле агентства, привязан к рабочему дню месяца
+  function cycleDay(dt){
+    var wd=workingDayOfMonth(dt||TODAY);
+    if(wd<=0)return 0; // сегодня выходной
+    return ((wd-1)%21)+1;
+  }
+  function isWeekend(dt){var w=(dt||VIEW).getDay();return w===0||w===6;}
 
   function daysUntil(m,d){
     var y=TODAY.getFullYear();
@@ -252,7 +268,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 
     // ЗАДАЧИ с датой и типом
     (D.tasks||[]).forEach(function(t){
-      var tDate=new Date(t.date+'T00:00:00');
+      var tDate=new Date(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate()+(t.dayOffset||0));
       var diff=dayDiff(VIEW,tDate); // >0 значит VIEW позже даты задачи
       var done=isDone(t.id,vStr);
       if(t.type==='carry'||t.type==='forward'){
@@ -286,10 +302,11 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       self.push({id:'sc-'+s.id,title:s.title,done:isDone('sc-'+s.id,vStr),overdueDays:0,tag:s.recur});
     });
 
-    // 21 ДЕНЬ — проверка текущего дня цикла падает в 'порядок' (только сегодня, демо)
-    if(sameDay(VIEW,TODAY)){
-      var cur=(D.rhythm21||[]).filter(function(r){return r.n===D.rhythmCurrentDay;})[0];
-      if(cur) order.push({id:'r-'+cur.n,title:'День '+cur.n+' ритма: '+cur.title,done:isDone('r-'+cur.n,vStr),overdueDays:0,tag:'YOURSELF · регулярная проверка'});
+    // 21 ДЕНЬ — проверка текущего дня цикла падает в 'порядок' (только сегодня, кроме выходных)
+    if(sameDay(VIEW,TODAY)&&!isWeekend(TODAY)){
+      var cn=cycleDay(TODAY);
+      var cur=(D.rhythm21||[]).filter(function(r){return r.n===cn;})[0];
+      if(cur) order.push({id:'r-'+cur.n,title:'Рабочий день '+cn+': '+cur.title,done:isDone('r-'+cur.n,vStr),overdueDays:0,tag:'YOURSELF · регулярная проверка'});
     }
 
     // ДНИ РОЖДЕНИЯ в этот день — событие, галочка 'увидела', не переносится
@@ -358,8 +375,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   }
 
   function renderRhythm(){
-    var list=D.rhythm21||[],cur=D.rhythmCurrentDay,html='',lastG=null;
-    html+='<div class="hint">Плановый глубокий контроль одного направления в день. Сегодня идёт день '+cur+' цикла — он подсвечен. На проверку встаёт в ленту «Сегодня».</div>';
+    var list=D.rhythm21||[],cur=cycleDay(TODAY),html='',lastG=null;
+    var wd=workingDayOfMonth(TODAY);
+    var head = isWeekend(TODAY)
+      ? 'Сегодня выходной — проверок агентства нет. Номер считается по рабочим дням месяца (пн–пт).'
+      : 'Сегодня '+wd+'-й рабочий день месяца, по циклу это день '+cur+' — он подсвечен и встаёт в ленту «Сегодня».';
+    html+='<div class="hint">Плановый глубокий контроль одного направления в день. '+head+' Праздники пока не учитываются — это в настоящей версии.</div>';
     list.forEach(function(r){
       if(r.group!==lastG){html+='<div class="r-group">'+esc(r.group)+'</div>';lastG=r.group;}
       html+='<div class="r-item'+(r.n===cur?' current':'')+'"><div class="r-n">'+r.n+'</div>'+
